@@ -13,6 +13,7 @@ pipeline {
     sh 'ls -l Security'          // List files inside Security folder (adjust if lowercase)
     sh 'cat Security/mobsf_scan.sh'  // Show the script content
     sh 'chmod +x Security/mobsf_scan.sh'
+    sh 'dos2unix Security/mobsf_scan.sh'
     sh 'bash ./Security/mobsf_scan.sh'
   }
 }
