@@ -47,19 +47,23 @@ while true; do
     sleep 5
 done
 
+# Fetch JSON report
 echo "[*] Fetching JSON report..."
 curl -s -X POST "$MOBSF_URL/api/v1/report_json" \
   -H "Authorization: $API_KEY" \
   -H "Content-Type: application/json" \
-  -d "{\"hash\":\"$HASH\",\"scan_type\":\"$SCAN_TYPE\"}" > mobsf-report.json
+  -d "{\"hash\":\"$HASH\",\"scan_type\":\"$SCAN_TYPE\"}" \
+  -o mobsf-report.json
 
+# Fetch HTML report
 echo "[*] Fetching HTML report..."
 curl -s -X POST "$MOBSF_URL/api/v1/report_html" \
   -H "Authorization: $API_KEY" \
   -H "Content-Type: application/json" \
-  -d "{\"hash\":\"$HASH\",\"scan_type\":\"$SCAN_TYPE\"}" > mobsf-report.html
+  -d "{\"hash\":\"$HASH\",\"scan_type\":\"$SCAN_TYPE\"}" \
+  -o mobsf-report.html
 
-# Extract critical/high scores
+# Extract critical/high scores safely
 CRITICAL=$(jq '.security_score.critical // 0' mobsf-report.json)
 HIGH=$(jq '.security_score.high // 0' mobsf-report.json)
 
