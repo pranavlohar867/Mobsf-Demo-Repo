@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-APP_FILE="app/diva.apk"
+APP_FILE="app/DivaApplication.apk"
 MOBSF_URL="http://host.docker.internal:8000"
 API_KEY="$MOBSF_API_KEY"
 
