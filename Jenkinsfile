@@ -9,7 +9,7 @@ pipeline {
     stage('Mobile SAST - MobSF') {
       steps {
         sh 'chmod +x Security/mobsf_scan.sh'
-        sh 'security/mobsf_scan.sh'
+        sh 'Security/mobsf_scan.sh'
       }
     }
   }
