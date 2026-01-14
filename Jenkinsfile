@@ -7,11 +7,15 @@ pipeline {
 
   stages {
     stage('Mobile SAST - MobSF') {
-      steps {
-        sh 'chmod +x Security/mobsf_scan.sh'
-        sh 'Security/mobsf_scan.sh'
-      }
-    }
+  steps {
+    sh 'pwd'                     // Prints current directory path
+    sh 'ls -l'                   // Lists files in workspace root
+    sh 'ls -l Security'          // List files inside Security folder (adjust if lowercase)
+    sh 'cat Security/mobsf_scan.sh'  // Show the script content
+    sh 'chmod +x Security/mobsf_scan.sh'
+    sh 'Security/mobsf_scan.sh'
+  }
+}
   }
 
   post {
