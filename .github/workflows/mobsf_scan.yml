@@ -1,40 +1,145 @@
-name: MobSF Android Scan
+name: MobSF Android Static Scan
 
 on:
   push:
-    branches: [ "main" ]
+    paths:
+      - "app/**/*.apk"
+  workflow_dispatch:
 
 jobs:
   mobsf_scan:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
+    # -------------------------------------------------
+    # 1. Checkout repository
+    # -------------------------------------------------
+    - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Upload APK to MobSF
+    # -------------------------------------------------
+    # 2. Install required tools
+    # -------------------------------------------------
+    - name: Install dependencies
       run: |
-        curl -X POST "$MOBSF_URL/api/v1/upload" \
+        sudo apt-get update
+        sudo apt-get install -y curl jq
+
+    # -------------------------------------------------
+    # 3. Verify APK exists
+    # -------------------------------------------------
+    - name: Verify APK file
+      run: |
+        echo "Listing app directory"
+        ls -l app
+        if [ ! -f app/DivaApplication.apk ]; then
+          echo "❌ APK not found"
+          exit 1
+        fi
+        echo "✅ APK found"
+
+    # -------------------------------------------------
+    # 4. DEBUG: Check secrets injection
+    # -------------------------------------------------
+    - name: Debug MobSF secrets
+      env:
+        MOBSF_URL: ${{ secrets.MOBSF_URL }}
+        MOBSF_API_KEY: ${{ secrets.MOBSF_API_KEY }}
+      run: |
+        echo "Checking secrets injection..."
+
+        if [ -z "$MOBSF_URL" ]; then
+          echo "❌ MOBSF_URL is EMPTY"
+          exit 1
+        else
+          echo "✅ MOBSF_URL is set"
+        fi
+
+        if [ -z "$MOBSF_API_KEY" ]; then
+          echo "❌ MOBSF_API_KEY is EMPTY"
+          exit 1
+        else
+          echo "✅ MOBSF_API_KEY is set"
+        fi
+
+    # -------------------------------------------------
+    # 5. Upload APK to MobSF
+    # -------------------------------------------------
+    - name: Upload APK to MobSF
+      env:
+        MOBSF_URL: ${{ secrets.MOBSF_URL }}
+        MOBSF_API_KEY: ${{ secrets.MOBSF_API_KEY }}
+      run: |
+        echo "Uploading APK to MobSF..."
+
+        curl -v -X POST "$MOBSF_URL/api/v1/upload" \
           -H "Authorization: $MOBSF_API_KEY" \
-          -F "file=@app/DivaApplication.apk" > upload.json
+          -F "file=@app/DivaApplication.apk" \
+          -o upload.json
+
+        echo "Upload response:"
+        cat upload.json
 
         HASH=$(jq -r '.hash' upload.json)
+
+        if [ "$HASH" = "null" ] || [ -z "$HASH" ]; then
+          echo "❌ Failed to get hash from upload response"
+          exit 1
+        fi
+
         echo "HASH=$HASH" >> $GITHUB_ENV
+        echo "✅ Upload successful, hash=$HASH"
 
-    - name: Trigger MobSF Scan
+    # -------------------------------------------------
+    # 6. Trigger MobSF scan
+    # -------------------------------------------------
+    - name: Trigger MobSF scan
+      env:
+        MOBSF_URL: ${{ secrets.MOBSF_URL }}
+        MOBSF_API_KEY: ${{ secrets.MOBSF_API_KEY }}
+        HASH: ${{ env.HASH }}
       run: |
-        curl -X POST "$MOBSF_URL/api/v1/scan" \
-          -H "Authorization: $MOBSF_API_KEY" \
-          -d "hash=$HASH"
+        echo "Triggering scan for hash: $HASH"
 
-    - name: Download Scan Report
+        curl -v -X POST "$MOBSF_URL/api/v1/scan" \
+          -H "Authorization: $MOBSF_API_KEY" \
+          -H "Content-Type: application/json" \
+          -d "{\"hash\":\"$HASH\"}"
+
+        echo "✅ Scan triggered"
+
+    # -------------------------------------------------
+    # 7. Download JSON report
+    # -------------------------------------------------
+    - name: Download MobSF report
+      env:
+        MOBSF_URL: ${{ secrets.MOBSF_URL }}
+        MOBSF_API_KEY: ${{ secrets.MOBSF_API_KEY }}
+        HASH: ${{ env.HASH }}
       run: |
-        curl -X POST "$MOBSF_URL/api/v1/report_json" \
-          -H "Authorization: $MOBSF_API_KEY" \
-          -d "hash=$HASH" > mobsf-report.json
+        mkdir -p app/security/reports
 
-    - name: Upload report artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: mobsf-report
-        path: mobsf-report.json
+        curl -v -X POST "$MOBSF_URL/api/v1/report_json" \
+          -H "Authorization: $MOBSF_API_KEY" \
+          -H "Content-Type: application/json" \
+          -d "{\"hash\":\"$HASH\"}" \
+          -o app/security/reports/mobsf-report.json
+
+        echo "✅ Report downloaded"
+
+    # -------------------------------------------------
+    # 8. Enforce security gate (fail on Critical)
+    # -------------------------------------------------
+    - name: Enforce security gate
+      run: |
+        CRITICAL=$(jq '.issues | to_entries[] | select(.value.severity=="Critical")' \
+          app/security/reports/mobsf-report.json | wc -l)
+
+        echo "Critical findings count: $CRITICAL"
+
+        if [ "$CRITICAL" -gt 0 ]; then
+          echo "❌ Build failed due to Critical vulnerabilities"
+          exit 1
+        else
+          echo "✅ No Critical vulnerabilities found"
+        fi
