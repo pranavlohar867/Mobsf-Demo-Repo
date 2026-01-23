@@ -59,7 +59,7 @@ jobs:
         curl -X POST "$MOBSF_URL/api/v1/scan" \
           -H "Authorization: $MOBSF_API_KEY" \
           -H "Content-Type: application/json" \
-          -d "{\"hash\":\"$HASH\"}"
+          -d "{\"hash\":\"$HASH\",\"scan_type\":\"apk\"}"
 
     - name: Download report
       run: |
