@@ -18,12 +18,12 @@ jobs:
       - name: Upload APK to MobSF
         run: |
           curl -X POST "$MOBSF_URL/api/v1/upload" \
-            -H "Authorization: $MOBSF_API_KEY" \
-            -F "file=@app/DivaApplication.apk" > upload.json
+          -H "Authorization: $MOBSF_API_KEY" \
+          -F "file=@app/DivaApplication.apk" > upload.json
 
           cat upload.json
-          HASH=$(jq -r '.hash' upload.json)
-          echo "HASH=$HASH" >> $GITHUB_ENV
+            HASH=$(jq -r '.hash' upload.json)
+            echo "HASH=$HASH" >> $GITHUB_ENV
 
       - name: Trigger scan
         run: |
