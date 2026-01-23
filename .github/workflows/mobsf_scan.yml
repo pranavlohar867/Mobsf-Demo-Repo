@@ -1,40 +1,39 @@
 name: MobSF Android Scan
 
 on:
-  push:
-    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   mobsf_scan:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Checkout repo
+      uses: actions/checkout@v4
 
-      - name: Install jq
-        run: sudo apt-get update && sudo apt-get install -y jq
+    - name: Install jq
+      run: sudo apt-get install -y jq
 
-      - name: Upload APK to MobSF
-        run: |
-          curl -X POST "$MOBSF_URL/api/v1/upload" \
+    - name: Upload APK to MobSF
+      run: |
+        curl -X POST "$MOBSF_URL/api/v1/upload" \
           -H "Authorization: $MOBSF_API_KEY" \
           -F "file=@app/DivaApplication.apk" > upload.json
 
-          cat upload.json
-            HASH=$(jq -r '.hash' upload.json)
-            echo "HASH=$HASH" >> $GITHUB_ENV
+        cat upload.json
+        HASH=$(jq -r '.hash' upload.json)
+        echo "HASH=$HASH" >> $GITHUB_ENV
 
-      - name: Trigger scan
-        run: |
-          curl -X POST "$MOBSF_URL/api/v1/scan" \
-            -H "Authorization: $MOBSF_API_KEY" \
-            -F "hash=$HASH" \
-            -F "scan_type=apk"
+    - name: Trigger scan
+      run: |
+        curl -X POST "$MOBSF_URL/api/v1/scan" \
+          -H "Authorization: $MOBSF_API_KEY" \
+          -d "hash=$HASH" \
+          -d "scan_type=apk"
 
-      - name: Download JSON report
-        run: |
-          curl -X POST "$MOBSF_URL/api/v1/report_json" \
-            -H "Authorization: $MOBSF_API_KEY" \
-            -F "hash=$HASH" \
-            -o app/security/reports/mobsf_report.json
+    - name: Download report (JSON)
+      run: |
+        curl -X POST "$MOBSF_URL/api/v1/report_json" \
+          -H "Authorization: $MOBSF_API_KEY" \
+          -d "hash=$HASH" \
+          -o app/security/reports/mobsf_report.json
