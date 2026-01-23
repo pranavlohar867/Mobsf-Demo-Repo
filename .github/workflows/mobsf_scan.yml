@@ -1,71 +1,40 @@
 name: MobSF Android Scan
 
 on:
-  workflow_dispatch:
   push:
-    branches:
-      - main
+    branches: [ main ]
 
 jobs:
   mobsf_scan:
     runs-on: ubuntu-latest
 
-    # 🔐 FORCE secrets into job environment
-    env:
-      MOBSF_URL: ${{ secrets.MOBSF_URL }}
-      MOBSF_API_KEY: ${{ secrets.MOBSF_API_KEY }}
-
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Install tools
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y curl jq
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
 
-    - name: DEBUG – Check secrets
-      run: |
-        echo "Checking MobSF secrets..."
-        if [ -z "$MOBSF_URL" ]; then
-          echo "❌ MOBSF_URL is EMPTY"
-          exit 1
-        fi
-        if [ -z "$MOBSF_API_KEY" ]; then
-          echo "❌ MOBSF_API_KEY is EMPTY"
-          exit 1
-        fi
-        echo "✅ Secrets are injected"
+      - name: Upload APK to MobSF
+        run: |
+          curl -X POST "$MOBSF_URL/api/v1/upload" \
+            -H "Authorization: $MOBSF_API_KEY" \
+            -F "file=@app/DivaApplication.apk" > upload.json
 
-    - name: Upload APK to MobSF
-      run: |
-        curl -X POST "$MOBSF_URL/api/v1/upload" \
-          -H "Authorization: $MOBSF_API_KEY" \
-          -F "file=@app/DivaApplication.apk" \
-          -o upload.json
+          cat upload.json
+          HASH=$(jq -r '.hash' upload.json)
+          echo "HASH=$HASH" >> $GITHUB_ENV
 
-        cat upload.json
-        HASH=$(jq -r '.hash' upload.json)
+      - name: Trigger scan
+        run: |
+          curl -X POST "$MOBSF_URL/api/v1/scan" \
+            -H "Authorization: $MOBSF_API_KEY" \
+            -F "hash=$HASH" \
+            -F "scan_type=apk"
 
-        if [ -z "$HASH" ] || [ "$HASH" = "null" ]; then
-          echo "❌ Failed to get hash"
-          exit 1
-        fi
-
-        echo "HASH=$HASH" >> $GITHUB_ENV
-
-    - name: Trigger scan
-      run: |
-        curl -X POST "$MOBSF_URL/api/v1/scan" \
-          -H "Authorization: $MOBSF_API_KEY" \
-          -H "Content-Type: application/json" \
-          -d "{\"hash\":\"$HASH\",\"scan_type\":\"apk\"}"
-
-    - name: Download report
-      run: |
-        mkdir -p app/security/reports
-        curl -X POST "$MOBSF_URL/api/v1/report_json" \
-          -H "Authorization: $MOBSF_API_KEY" \
-          -H "Content-Type: application/json" \
-          -d "{\"hash\":\"$HASH\"}" \
-          -o app/security/reports/mobsf-report.json
+      - name: Download JSON report
+        run: |
+          curl -X POST "$MOBSF_URL/api/v1/report_json" \
+            -H "Authorization: $MOBSF_API_KEY" \
+            -F "hash=$HASH" \
+            -o app/security/reports/mobsf_report.json
