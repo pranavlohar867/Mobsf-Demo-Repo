@@ -60,11 +60,38 @@ jobs:
            -H "Authorization: $MOBSF_API_KEY" \
            -F "hash=$HASH"
 
-    - name: Download report
+    - name: Generate and Download JSON Report
       run: |
-        mkdir -p app/security/reports
-        curl -X POST "$MOBSF_URL/api/v1/report_json" \
-          -H "Authorization: $MOBSF_API_KEY" \
-          -H "Content-Type: application/json" \
-          -d "{\"hash\":\"$HASH\"}" \
-          -o app/security/reports/mobsf-report.json
+          # 1. Fetch the JSON report from MobSF
+          curl -X POST "${{ secrets.MOBSF_URL }}/api/v1/report_json" \
+               -H "Authorization: ${{ secrets.MOBSF_API_KEY }}" \
+               -F "hash=$HASH" \
+               -o mobsf_report.json
+          
+          echo "REPORT_PATH=$(pwd)/mobsf_report.json" >> $GITHUB_ENV
+
+    - name: Parse Vulnerabilities and Check Status
+      id: security_check
+      run: |
+          # 2. Extract counts using jq
+          # MobSF reports often group findings by severity in 'findings' or 'average_cvss'
+          # Note: Adjust the jq path below based on your specific MobSF version's JSON structure
+          CRITICAL=$(jq '[.findings[] | select(.severity == "high" and .cvss >= 9)] | length' mobsf_report.json)
+          HIGH=$(jq '[.findings[] | select(.severity == "high" and .cvss < 9)] | length' mobsf_report.json)
+          MEDIUM=$(jq '[.findings[] | select(.severity == "warning")] | length' mobsf_report.json)
+          LOW=$(jq '[.findings[] | select(.severity == "info")] | length' mobsf_report.json)
+
+          echo "Vulnerability Summary:"
+          echo "Critical: $CRITICAL"
+          echo "High: $HIGH"
+          echo "Medium: $MEDIUM"
+          echo "Low: $LOW"
+          echo "Report saved at: $REPORT_PATH"
+
+          # 3. Fail logic: Exit with 1 if Critical or High > 0
+          if [ "$CRITICAL" -gt 0 ] || [ "$HIGH" -gt 0 ]; then
+            echo "FAILED: Found $CRITICAL Critical and $HIGH High vulnerabilities."
+            exit 1
+          else
+            echo "PASSED: No Critical or High vulnerabilities found."
+          fi
