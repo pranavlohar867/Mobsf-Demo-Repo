@@ -70,25 +70,26 @@ jobs:
           
           echo "REPORT_PATH=$(pwd)/mobsf_report.pdf" >> $GITHUB_ENV
 
-    - name: Evaluate MobSF findings
+    - name: Evaluate MobSF findings (all modules)
       run: |
-        HIGH=$(jq '[.code_analysis[]? | select(.severity=="high")] | length' mobsf_report.pdf)
-        MEDIUM=$(jq '[.code_analysis[]? | select(.severity=="warning")] | length' mobsf_report.pdf)
-        LOW=$(jq '[.code_analysis[]? | select(.severity=="info")] | length' mobsf_report.pdf)
-
+        HIGH=$(jq '.. | objects | select(.severity?=="high") | length' mobsf_report.json)
+        MEDIUM=$(jq '.. | objects | select(.severity?=="warning") | length' mobsf_report.json)
+        LOW=$(jq '.. | objects | select(.severity?=="info") | length' mobsf_report.json)
+    
         echo "-------------------------------"
-        echo "Vulnerability Summary:"
-        echo "High/Critical: $HIGH"
-        echo "Medium/Warning: $MEDIUM"
-        echo "Low/Info: $LOW"
+        echo "MobSF Vulnerability Summary"
+        echo "High/Critical : $HIGH"
+        echo "Medium        : $MEDIUM"
+        echo "Low           : $LOW"
         echo "-------------------------------"
-
+    
         if [ "$HIGH" -gt 0 ]; then
-          echo "STATUS: FAILED - Found $HIGH High/Critical vulnerabilities."
+          echo "❌ FAILED: High severity vulnerabilities found"
           exit 1
         else
-          echo "STATUS: PASSED - Security threshold met."
+          echo "✅ PASSED: Security threshold met"
         fi
+
     - name: Upload MobSF report as artifact
       uses: actions/upload-artifact@v4
       with:
