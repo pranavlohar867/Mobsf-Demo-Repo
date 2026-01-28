@@ -99,14 +99,13 @@ jobs:
     # Download PDF (human report)
     # -----------------------------
     - name: Download MobSF PDF report
-      if: always()   # run even if gate fails
       run: |
-        curl -X POST "${{ secrets.MOBSF_URL }}/api/v1/report_pdf" \
-          -H "Authorization: ${{ secrets.MOBSF_API_KEY }}" \
-          -F "hash=$HASH" \
-          -o mobsf_report.pdf
+        curl -X POST "${{ secrets.MOBSF_URL }}/api/v1/download_pdf" \
+             -H "Authorization: ${{ secrets.MOBSF_API_KEY }}" \
+             -F "hash=$HASH" \
+             -o mobsf_report.pdf
 
-        ls -l mobsf_report.pdf
+        file mobsf_report.pdf
 
     # -----------------------------
     # Upload PDF artifact
