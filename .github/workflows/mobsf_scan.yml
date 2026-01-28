@@ -70,30 +70,22 @@ jobs:
           
           echo "REPORT_PATH=$(pwd)/mobsf_report.json" >> $GITHUB_ENV
 
-    - name: Parse Vulnerabilities and Check Status
-      id: security_check
+    - name: Evaluate MobSF findings
       run: |
-          # 1. Extract counts by converting the findings object to entries and filtering by severity
-          # MobSF typically uses 'high', 'warning', and 'info'
-          HIGH=$(jq '.findings | to_entries | [.[] | select(.value.severity == "high")] | length' mobsf_report.json)
-          MEDIUM=$(jq '.findings | to_entries | [.[] | select(.value.severity == "warning")] | length' mobsf_report.json)
-          LOW=$(jq '.findings | to_entries | [.[] | select(.value.severity == "info")] | length' mobsf_report.json)
+        HIGH=$(jq '[.code_analysis[]? | select(.severity=="high")] | length' mobsf_report.json)
+        MEDIUM=$(jq '[.code_analysis[]? | select(.severity=="warning")] | length' mobsf_report.json)
+        LOW=$(jq '[.code_analysis[]? | select(.severity=="info")] | length' mobsf_report.json)
 
-          # 2. Display summary
-          echo "-------------------------------"
-          echo "Vulnerability Summary:"
-          echo "Critical/High: $HIGH"
-          echo "Medium/Warning: $MEDIUM"
-          echo "Low/Info: $LOW"
-          echo "-------------------------------"
-          
-          # 3. Output the absolute path
-          echo "Report downloaded to: ${{ env.REPORT_PATH }}"
+        echo "-------------------------------"
+        echo "Vulnerability Summary:"
+        echo "High/Critical: $HIGH"
+        echo "Medium/Warning: $MEDIUM"
+        echo "Low/Info: $LOW"
+        echo "-------------------------------"
 
-          # 4. Fail logic: Exit with 1 if High vulnerabilities exist
-          if [ "$HIGH" -gt 0 ]; then
-            echo "STATUS: FAILED - Found $HIGH High/Critical vulnerabilities."
-            exit 1
-          else
-            echo "STATUS: PASSED - Security threshold met."
-          fi
+        if [ "$HIGH" -gt 0 ]; then
+          echo "STATUS: FAILED - Found $HIGH High/Critical vulnerabilities."
+          exit 1
+        else
+          echo "STATUS: PASSED - Security threshold met."
+        fi
