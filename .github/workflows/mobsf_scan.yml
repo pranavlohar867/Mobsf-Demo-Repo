@@ -89,3 +89,8 @@ jobs:
         else
           echo "STATUS: PASSED - Security threshold met."
         fi
+    - name: Upload MobSF report as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: mobsf-report
+        path: mobsf_report.json
