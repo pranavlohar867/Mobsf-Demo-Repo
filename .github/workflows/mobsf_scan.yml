@@ -104,9 +104,11 @@ jobs:
              -H "Authorization: ${{ secrets.MOBSF_API_KEY }}" \
              -F "hash=$HASH" \
              -o mobsf_report.pdf
-
-        file mobsf-pdf-report.pdf
-
+    
+        echo "=== PDF verification ==="
+        ls -lh mobsf_report.pdf
+        file mobsf_report.pdf
+    
     # -----------------------------
     # Upload PDF artifact
     # -----------------------------
@@ -116,3 +118,4 @@ jobs:
       with:
         name: mobsf-pdf-report
         path: mobsf_report.pdf
+        if-no-files-found: error
