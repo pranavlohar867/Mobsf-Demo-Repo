@@ -63,12 +63,12 @@ jobs:
     - name: Generate and Download JSON Report
       run: |
           # 1. Fetch the JSON report from MobSF
-          curl -X POST "${{ secrets.MOBSF_URL }}/api/v1/report_json" \
+          curl -X POST "${{ secrets.MOBSF_URL }}/api/v1/report_pdf" \
                -H "Authorization: ${{ secrets.MOBSF_API_KEY }}" \
                -F "hash=$HASH" \
-               -o mobsf_report.json
+               -o mobsf_report.pdf
           
-          echo "REPORT_PATH=$(pwd)/mobsf_report.json" >> $GITHUB_ENV
+          echo "REPORT_PATH=$(pwd)/mobsf_report.pdf" >> $GITHUB_ENV
 
     - name: Evaluate MobSF findings
       run: |
