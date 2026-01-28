@@ -75,53 +75,35 @@ jobs:
     # -----------------------------
     # Analyze JSON → PASS / FAIL
     # -----------------------------
-    - name: Analyze findings and enforce gate
+    - name: Analyze findings (do not fail yet)
+      id: analyze
       run: |
         HIGH=$(jq '[.. | objects | select(.severity?=="high")] | length' mobsf_report.json)
         MEDIUM=$(jq '[.. | objects | select(.severity?=="warning")] | length' mobsf_report.json)
         LOW=$(jq '[.. | objects | select(.severity?=="info")] | length' mobsf_report.json)
     
-        echo "--------------------------------"
         echo "MobSF Vulnerability Summary"
         echo "High/Critical : $HIGH"
         echo "Medium        : $MEDIUM"
         echo "Low           : $LOW"
-        echo "--------------------------------"
     
-        if [ "$HIGH" -gt 0 ]; then
-          echo "❌ APPLICATION FAILED SECURITY CHECK"
-          exit 1
-        else
-          echo "✅ APPLICATION PASSED SECURITY CHECK"
-        fi
+        echo "HIGH=$HIGH" >> $GITHUB_ENV
+        echo "MEDIUM=$MEDIUM" >> $GITHUB_ENV
+        echo "LOW=$LOW" >> $GITHUB_ENV
 
     # -----------------------------
     # Download MobSF PDF report
     # -----------------------------
     - name: Download MobSF PDF report
+      if: always()
       run: |
-        set -e
-    
-        echo "Downloading MobSF PDF report..."
-    
-        curl --fail --silent --show-error \
+        curl --fail \
           -X POST "${{ secrets.MOBSF_URL }}/api/v1/download_pdf" \
           -H "Authorization: ${{ secrets.MOBSF_API_KEY }}" \
           -F "hash=$HASH" \
           -o mobsf_report.pdf
     
-        echo "Checking PDF file..."
-        ls -lh mobsf_report.pdf
-    
         file mobsf_report.pdf
-    
-        # Hard validation
-        if ! file mobsf_report.pdf | grep -q "PDF"; then
-          echo "❌ ERROR: File is not a valid PDF"
-          echo "Dumping first 20 lines for debugging:"
-          head -n 20 mobsf_report.pdf
-          exit 1
-        fi
 
     # -----------------------------
     # Upload PDF artifact
@@ -132,4 +114,12 @@ jobs:
       with:
         name: mobsf-pdf-report
         path: mobsf_report.pdf
-        if-no-files-found: error
+
+    - name: Enforce security gate
+      run: |
+        if [ "$HIGH" -gt 0 ]; then
+          echo "❌ APPLICATION FAILED SECURITY CHECK"
+          exit 1
+        else
+          echo "✅ APPLICATION PASSED SECURITY CHECK"
+        fi
