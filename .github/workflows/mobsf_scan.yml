@@ -72,9 +72,9 @@ jobs:
 
     - name: Evaluate MobSF findings
       run: |
-        HIGH=$(jq '[.code_analysis[]? | select(.severity=="high")] | length' mobsf_report.json)
-        MEDIUM=$(jq '[.code_analysis[]? | select(.severity=="warning")] | length' mobsf_report.json)
-        LOW=$(jq '[.code_analysis[]? | select(.severity=="info")] | length' mobsf_report.json)
+        HIGH=$(jq '[.code_analysis[]? | select(.severity=="high")] | length' mobsf_report.pdf)
+        MEDIUM=$(jq '[.code_analysis[]? | select(.severity=="warning")] | length' mobsf_report.pdf)
+        LOW=$(jq '[.code_analysis[]? | select(.severity=="info")] | length' mobsf_report.pdf)
 
         echo "-------------------------------"
         echo "Vulnerability Summary:"
