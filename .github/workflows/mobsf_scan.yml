@@ -60,9 +60,9 @@ jobs:
            -H "Authorization: $MOBSF_API_KEY" \
            -F "hash=$HASH"
 
-    - name: Generate and Download JSON Report
+    - name: Generate and Download PDF Report
       run: |
-          # 1. Fetch the JSON report from MobSF
+          # 1. Fetch the PDF report from MobSF
           curl -X POST "${{ secrets.MOBSF_URL }}/api/v1/report_pdf" \
                -H "Authorization: ${{ secrets.MOBSF_API_KEY }}" \
                -F "hash=$HASH" \
@@ -93,4 +93,4 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: mobsf-report
-        path: mobsf_report.json
+        path: mobsf_report.pdf
