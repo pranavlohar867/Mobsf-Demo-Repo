@@ -96,19 +96,34 @@ jobs:
         fi
 
     # -----------------------------
-    # Download PDF (human report)
+    # Download MobSF PDF report
     # -----------------------------
     - name: Download MobSF PDF report
       run: |
-        curl -X POST "${{ secrets.MOBSF_URL }}/api/v1/download_pdf" \
-             -H "Authorization: ${{ secrets.MOBSF_API_KEY }}" \
-             -F "hash=$HASH" \
-             -o mobsf_report.pdf
+        set -e
     
-        echo "=== PDF verification ==="
+        echo "Downloading MobSF PDF report..."
+    
+        curl --fail --silent --show-error \
+          -X POST "${{ secrets.MOBSF_URL }}/api/v1/download_pdf" \
+          -H "Authorization: ${{ secrets.MOBSF_API_KEY }}" \
+          -F "hash=$HASH" \
+          -o mobsf_report.pdf
+    
+        echo "Checking PDF file..."
         ls -lh mobsf_report.pdf
+    
         file mobsf_report.pdf
     
+        # Hard validation
+        if ! file mobsf_report.pdf | grep -q "PDF"; then
+          echo "❌ ERROR: File is not a valid PDF"
+          echo "Dumping first 20 lines for debugging:"
+          head -n 20 mobsf_report.pdf
+          exit 1
+        fi
+    
+        
     # -----------------------------
     # Upload PDF artifact
     # -----------------------------
