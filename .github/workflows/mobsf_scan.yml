@@ -122,8 +122,7 @@ jobs:
           head -n 20 mobsf_report.pdf
           exit 1
         fi
-    
-        
+
     # -----------------------------
     # Upload PDF artifact
     # -----------------------------
